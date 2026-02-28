@@ -67,7 +67,7 @@ SMODS.Joker {
     end,
 
     calculate = function(self, card, context)
-        if context.end_of_round and context.boss then
+        if context.beat_boss then
             local valid_jokers = {}
             for _, j in ipairs(G.jokers.cards) do
                 if j ~= card then
