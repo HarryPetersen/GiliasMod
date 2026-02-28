@@ -1,0 +1,6 @@
+---@diagnostic disable: undefined-global
+
+assert(SMODS.load_file("src/jokers.lua"))()
+assert(SMODS.load_file("src/tarots.lua"))()
+assert(SMODS.load_file("src/pokerhands.lua"))()
+assert(SMODS.load_file("src/planets.lua"))()

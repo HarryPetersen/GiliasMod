@@ -1,0 +1,268 @@
+---@diagnostic disable: undefined-global
+
+SMODS.Atlas {
+    key = "duo_atlas",
+    path = "Duo.png",
+    px = 71,
+    py = 95
+}
+
+SMODS.Atlas {
+    key = "focus_atlas",
+    path = "Focus.png",
+    px = 71,
+    py = 95
+}
+
+SMODS.Atlas {
+    key = "sneak_atlas",
+    path = "Sneak.png",
+    px = 71,
+    py = 95
+}
+
+SMODS.Atlas {
+    key = "christmas_atlas",
+    path = "Christmas.png",
+    px = 71,
+    py = 95
+}
+
+SMODS.Atlas {
+    key = "bunk_atlas",
+    path = "Bunk.png",
+    px = 71,
+    py = 95
+}
+
+SMODS.Joker {
+    key = "awesome_duo",
+    name = "Awesome Duo",
+    atlas = "duo_atlas",
+    pos = { x = 0, y = 0},
+    rarity = 4,
+    cost = 20,
+    blueprint_compat = false,
+    eternal_compat = true,
+
+    loc_txt = {
+        name = "Awesome Duo",
+        text = {
+            "At end of Boss Blind,",
+            "Create a {C:dark_edition}Negative{} copy",
+            "of a random joker",
+            "(Awesome Duo excluded)"
+        },
+    },
+
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue + 1] = { key = 'e_negative_consumable', set = 'Edition', config = { extra = 1 } }
+    end,
+
+    calculate = function(self, card, context)
+        if context.end_of_round and context.boss then
+            local valid_jokers = {}
+            for _, j in ipairs(G.jokers.cards) do
+                if j ~= card then
+                    table.insert(valid_jokers, j)
+                end
+            end
+
+            if #valid_jokers > 0 then
+                local chosen = pseudorandom_element(valid_jokers, pseudoseed(self.key))
+            
+                local copy = copy_card(chosen)
+                copy:set_edition("e_negative")
+                copy:add_to_deck()
+                G.jokers:emplace(copy)
+
+                return {
+                    message = "Cloned!",
+                    colour = G.C.PURPLE
+                }
+            end
+        end
+
+        return nil
+    end
+}
+
+SMODS.Joker {
+    key = "focus",
+    name = "focus",
+    atlas = "focus_atlas",
+    pos = { x = 0, y = 0},
+    rarity = 1,
+    cost = 4,
+    blueprint_compat = true,
+    eternal_compat = true,
+
+    loc_txt = {
+        name = "Focus",
+        text = {
+            "Gives {C:mult}#1#{} Mult for",
+            "each {C:attention}Stone Card",
+            "in your {C:attention}full deck",
+            "{C:inactive}(Currently {C:mult}+#2#{C:inactive} Mult)"
+        },
+    },
+
+    config = { extra = { mult = 9 } },
+
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue + 1] = G.P_CENTERS.m_stone
+
+        local stone_tally = 0
+        if G.playing_cards then
+            for _, playing_card in ipairs(G.playing_cards) do
+                if SMODS.has_enhancement(playing_card, 'm_stone') then stone_tally = stone_tally + 1 end
+            end
+        end
+        return { vars = { card.ability.extra.mult, stone_tally * card.ability.extra.mult } }
+    end,
+
+    calculate = function(self, card, context)
+        if context.joker_main then
+            local stone_tally = 0
+            for _, playing_card in ipairs(G.playing_cards) do
+                if SMODS.has_enhancement(playing_card, "m_stone") then stone_tally = stone_tally + 1 end
+            end
+            return {
+                mult = card.ability.extra.mult * stone_tally,
+            }
+        end
+    end,
+
+    in_pool = function(self, args) --equivalent to `enhancement_gate = 'm_stone'`
+        for _, playing_card in ipairs(G.playing_cards or {}) do
+            if SMODS.has_enhancement(playing_card, 'm_stone') then
+                return true
+            end
+        end
+        return false
+    end
+}
+
+SMODS.Joker {
+    key = "sneak",
+    name = "sneak",
+    atlas = "sneak_atlas",
+    pos = { x = 0, y = 0},
+    rarity = 2,
+    cost = 6,
+    blueprint_compat = true,
+    eternal_compat = true,
+
+    loc_txt = {
+        name = "Sneak",
+        text = {
+            "Adds {C:mult}+400{} Mult",
+        },
+    },
+
+    config = { extra = { mult = 400 }, },
+    loc_vars = function(self, info_queue, card)
+        return { vars = { card.ability.extra.mult } }
+    end,
+    calculate = function(self, card, context)
+        if context.joker_main then
+            return {
+                mult = card.ability.extra.mult
+            }
+        end
+    end
+}
+
+SMODS.Joker {
+    key = "christmas",
+    name = "christmas",
+    atlas = "christmas_atlas",
+    pos = { x = 0, y = 0 },
+    rarity = 3,
+    cost = 9,
+    blueprint_compat = true,
+    eternal_compat = true,
+
+    config = { extra = { dollars = 10 } },
+
+    loc_txt = {
+        name = "Christmas",
+        text = {
+            "Earn {C:money}$#1#{}",
+            "for each {C:attention}Steel card{}",
+            "held in hand at end of round"
+        },
+    },
+
+    loc_vars = function(self, info_queue, card)
+        return { vars = { card.ability.extra.dollars } }
+    end,
+
+    calculate = function(self, card, context)
+        if context.end_of_round
+            and context.cardarea == G.hand
+            and context.individual
+            and context.other_card
+        then
+            local per = (card.ability and card.ability.extra and card.ability.extra.dollars) or 0
+            if per <= 0 then return end
+
+            local c = context.other_card
+            local center = c.config and c.config.center
+            local key = center and center.key
+
+            if key == "m_steel" or key == "c_steel" then
+                return { dollars = per }
+            end
+        end
+    end
+}
+
+SMODS.Joker{
+    key = "bunk",
+    name = "Bunk",
+    atlas = "bunk_atlas",
+    pos = { x = 0, y = 0 },
+    rarity = 2,
+    cost = 6,
+    blueprint_compat = true,
+    eternal_compat = true,
+
+    config = { extra = { chips = 20 } },
+
+    loc_txt = {
+        name = "Bunk",
+        text = {
+            "Earn {C:chips}+#1#{} Chips",
+            "for each High Card played",
+            "{C:inactive}(Currently {C:chips}+#2#{C:inactive} Chips)"
+        },
+    },
+
+    loc_vars = function(self, info_queue, card)
+        local game = G.GAME or G.Game
+        local highcards_played = 0
+
+        if game and game.hands and game.hands["High Card"] and game.hands["High Card"].played then
+            highcards_played = game.hands["High Card"].played
+        end
+
+        local per = (card.ability and card.ability.extra and card.ability.extra.chips) or 0
+        return { vars = { per, per * highcards_played } }
+    end,
+
+    calculate = function(self, card, context)
+        if context.joker_main then
+            local game = G.GAME or G.Game
+            local highcards_played = 0
+
+            if game and game.hands and game.hands["High Card"] and game.hands["High Card"].played then
+                highcards_played = game.hands["High Card"].played
+            end
+
+            return {
+                chips = highcards_played * (card.ability.extra.chips or 0)
+            }
+        end
+    end
+}

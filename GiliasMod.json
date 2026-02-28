@@ -1,0 +1,16 @@
+{
+	"id": "GiliasMod",
+	"name": "GiliasMod",
+	"display_name": "Gilia's Mod",
+	"author": ["Harry Petersen"],
+	"description": "To my love Gilia, Love from Harry",
+	"prefix": "GM",
+	"main_file": "Gilia.lua",
+	"priority": 0,
+	"badge_colour": "F4A6C7",
+	"badge_text_colour": "FFFFFF",
+	"version": "0.0.1",
+	"dependencies": [
+		"Steamodded (>=1.0.0~BETA-1224a)"
+	]
+}
