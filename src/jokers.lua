@@ -35,6 +35,13 @@ SMODS.Atlas {
     py = 95
 }
 
+SMODS.Atlas {
+    key = "lilies_atlas",
+    path = "Lilies.png",
+    px = 71,
+    py = 95
+}
+
 SMODS.Joker {
     key = "awesome_duo",
     name = "Awesome Duo",
@@ -262,6 +269,40 @@ SMODS.Joker{
 
             return {
                 chips = highcards_played * (card.ability.extra.chips or 0)
+            }
+        end
+    end
+}
+
+SMODS.Joker {
+    key = "lilies",
+    name = "lilies",
+    atlas = "lilies_atlas",
+    pos = { x = 0, y = 0 },
+    rarity = 1,
+    cost = 12,
+    blueprint_compat = true,
+    eternal_compat = true,
+
+    config = { extra = { x_chips = 6, type = 'Three of a Kind' } },
+
+    loc_txt = {
+        name = "Lilies",
+        text = {
+            "{C:chips}x#1#{} Chips if played",
+            "hand contains",
+            "a {C:attention}#2#"
+        },
+    },
+
+    loc_vars = function(self, info_queue, card)
+        return { vars = { card.ability.extra.x_chips, localize(card.ability.extra.type, 'poker_hands') } }
+    end,
+
+    calculate = function(self, card, context)
+        if context.joker_main and next(context.poker_hands[card.ability.extra.type]) then
+            return {
+                xchips = card.ability.extra.x_chips
             }
         end
     end
