@@ -1,5 +1,23 @@
 ---@diagnostic disable: undefined-global
 
+local function all_hand_cards()
+    local t = {}
+    if not (G and G.hand and G.hand.cards) then return t end
+    for _, c in ipairs(G.hand.cards) do
+        if c and not c.debuff and not c.removed then
+        t[#t+1] = c
+        end
+    end
+    return t
+end
+
+local function rand_index(n, seed)
+    if pseudorandom then
+        return math.min(n, math.max(1, math.floor(pseudorandom(seed) * n) + 1))
+    end
+    return math.random(1, n)
+end
+
 SMODS.Atlas {
     key = "haribow_atlas",
     path = "Haribow.png",
@@ -12,9 +30,7 @@ SMODS.Consumable {
     set = "Spectral",
     atlas = "haribow_atlas",
     pos = { x = 0, y = 0 },
-
     config = { extra = { destroy = 2, enhancement = "m_steel" } },
-
     loc_vars = function(self, info_queue, card)
         return { vars = { card.ability.extra.destroy, card.ability.extra.enhancement } }
     end,
@@ -22,117 +38,87 @@ SMODS.Consumable {
     loc_txt = {
         name = "Haribow",
         text = {
-            "Destroys {C:attention}#1#{} random",
-            "cards in hand,",
-            "Turn the rest into {C:attention}Steel Cards"
+        "Destroys {C:attention}#1#{} random",
+        "cards in hand,",
+        "Turn the rest into {C:attention}Steel Cards{}"
         }
     },
 
     can_use = function(self, card)
-        return G.hand and G.hand.cards and #G.hand.cards > 0
+        return G and G.hand and G.hand.cards and #G.hand.cards > 0
     end,
 
     use = function(self, card, area, copier)
-        if not G.hand or not G.hand.cards or #G.hand.cards == 0 then return end
+        local hand = all_hand_cards()
+        if #hand == 0 then return end
 
-        local destroyed_cards = {}
-        local temp_hand = {}
+        local destroy_n = math.min(card.ability.extra.destroy or 2, #hand)
 
-        -- Copy hand safely
-        for _, playing_card in ipairs(G.hand.cards) do
-            temp_hand[#temp_hand + 1] = playing_card
+        -- pick destroy_n distinct cards from hand (without replacement)
+        local to_destroy = {}
+        for i = 1, destroy_n do
+        local idx = rand_index(#hand, "haribow_destroy_" .. i)
+        to_destroy[#to_destroy+1] = table.remove(hand, idx)
         end
 
-        -- Shuffle
-        pseudoshuffle(temp_hand, pseudoseed('haribow'))
-
-        -- Safe destroy amount
-        local destroy_count = math.min(card.ability.extra.destroy, #temp_hand)
-
-        for i = 1, destroy_count do
-            destroyed_cards[#destroyed_cards + 1] = temp_hand[i]
-        end
-
-        -- Juice effect
+        -- 1) dissolve destroyed cards with small stagger (looks nicer + avoids timing weirdness)
+        for i, c in ipairs(to_destroy) do
         G.E_MANAGER:add_event(Event({
             trigger = 'after',
-            delay = 0.4,
+            delay = 0.08 * (i-1),
             func = function()
-                play_sound('tarot1')
-                card:juice_up(0.3, 0.5)
-                return true
+            if c and c.start_dissolve and not c.removed then
+                c:start_dissolve(nil, true)
+            elseif c and c.remove then
+                c:remove()
+            end
+            return true
             end
         }))
-
-        -- Destroy cards
-        SMODS.destroy_cards(destroyed_cards)
-
-        -- Flip animation (avoid divide by zero)
-        local hand_size = #G.hand.cards
-        local denom = math.max(hand_size - 0.998, 0.001)
-
-        for i = 1, hand_size do
-            local percent = 1.15 - (i - 0.999) / denom * 0.3
-            G.E_MANAGER:add_event(Event({
-                trigger = 'after',
-                delay = 0.15,
-                func = function()
-                    local c = G.hand.cards[i]
-                    if c then
-                        c:flip()
-                        play_sound('card1', percent)
-                        c:juice_up(0.3, 0.3)
-                    end
-                    return true
-                end
-            }))
         end
 
-        -- Apply enhancement
-        for i = 1, hand_size do
-            G.E_MANAGER:add_event(Event({
-                trigger = 'after',
-                delay = 0.1,
-                func = function()
-                    local c = G.hand.cards[i]
-                    if c then
-                        local enh_key = card.ability.extra.enhancement
-                        c:set_ability(G.P_CENTERS[enh_key])
-                    end
-                    return true
-                end
-            }))
-        end
-
-        delay(0.2)
-
-        -- Flip back
-        for i = 1, hand_size do
-            local percent = 0.85 + (i - 0.999) / denom * 0.3
-            G.E_MANAGER:add_event(Event({
-                trigger = 'after',
-                delay = 0.15,
-                func = function()
-                    local c = G.hand.cards[i]
-                    if c then
-                        c:flip()
-                        play_sound('tarot2', percent, 0.6)
-                        c:juice_up(0.3, 0.3)
-                    end
-                    return true
-                end
-            }))
-        end
-
+        -- 2) after dissolves begin, flip+steel+flip the remaining hand cards
         G.E_MANAGER:add_event(Event({
-            trigger = 'after',
-            delay = 0.2,
-            func = function()
-                G.hand:unhighlight_all()
-                return true
-            end
-        }))
+        trigger = 'after',
+        delay = 0.15 + 0.08 * destroy_n,
+        func = function()
+            local remaining = all_hand_cards()
+            for i, c in ipairs(remaining) do
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.03 * (i-1),
+                func = function()
+                if not (c and c.set_ability and G.P_CENTERS and G.P_CENTERS.m_steel) then return true end
 
-        delay(0.5)
+                -- flip down -> apply -> flip up
+                if c.flip then c:flip() end
+                
+                G.E_MANAGER:add_event(Event({
+                    trigger = 'after',
+                    delay = 0,
+                    func = function()
+                    if c and not c.removed then
+                        c:set_ability(G.P_CENTERS.m_steel, nil, true)
+                        if c.juice_up then c:juice_up(0.2, 0.2) end
+                    end
+                    G.E_MANAGER:add_event(Event({
+                        trigger = 'after',
+                        delay = 0.4,
+                        func = function()
+                        if c and c.flip then c:flip() end
+                        return true
+                        end
+                    }))
+                    return true
+                    end
+                }))
+
+                return true
+                end
+            }))
+            end
+            return true
+        end
+        }))
     end,
 }

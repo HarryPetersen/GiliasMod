@@ -42,11 +42,30 @@ SMODS.Atlas {
     py = 95
 }
 
+local function clear_edition(c)
+  if not c then return end
+  -- some builds have a helper
+  if c.remove_edition then
+    pcall(function() c:remove_edition(true) end)
+  end
+
+  -- hard clear everything Steamodded might treat as "already has an edition"
+  c.edition = nil
+  c.edition_key = nil
+  c.edition_type = nil
+
+  if c.ability then
+    c.ability.edition = nil
+    c.ability.edition_key = nil
+    c.ability.edition_type = nil
+  end
+end
+
 SMODS.Joker {
     key = "awesome_duo",
     name = "Awesome Duo",
     atlas = "duo_atlas",
-    pos = { x = 0, y = 0},
+    pos = { x = 0, y = 0 },
     rarity = 4,
     cost = 20,
     blueprint_compat = false,
@@ -62,35 +81,36 @@ SMODS.Joker {
         },
     },
 
-    loc_vars = function(self, info_queue, card)
-        info_queue[#info_queue + 1] = { key = 'e_negative_consumable', set = 'Edition', config = { extra = 1 } }
-    end,
-
     calculate = function(self, card, context)
-        if context.beat_boss then
-            local valid_jokers = {}
-            for _, j in ipairs(G.jokers.cards) do
-                if j ~= card then
-                    table.insert(valid_jokers, j)
+        card.ability.extra = card.ability.extra or {}
+        card.ability.extra.duplicated = card.ability.extra.duplicated or false
+
+        if context.beat_boss and not card.ability.extra.duplicated then
+            local jokers = {}
+            for i = 1, #G.jokers.cards do
+                if G.jokers.cards[i] ~= card then
+                    jokers[#jokers + 1] = G.jokers.cards[i]
                 end
             end
 
-            if #valid_jokers > 0 then
-                local chosen = pseudorandom_element(valid_jokers, pseudoseed(self.key))
-            
-                local copy = copy_card(chosen)
-                copy:set_edition("e_negative")
-                copy:add_to_deck()
-                G.jokers:emplace(copy)
+            if #jokers > 0 then
+                local chosen_joker = pseudorandom_element(jokers, pseudorandom(seed))
+                local copied_joker = copy_card(chosen_joker, nil, nil, nil,
+                chosen_joker.edition and chosen_joker.edition.negative)
+                copied_joker:set_edition("e_negative", true)
+                copied_joker:add_to_deck()
+                G.jokers:emplace(copied_joker)
 
-                return {
-                    message = "Cloned!",
-                    colour = G.C.PURPLE
-                }
+                card.ability.extra.duplicated = true
+                return { message = localize('k_duplicated_ex') }
+            else
+                return { message = localize('k_no_other_jokers') }
             end
         end
 
-        return nil
+        if context.setting_blind then
+            card.ability.extra.duplicated = false
+        end
     end
 }
 
