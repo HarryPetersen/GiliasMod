@@ -15,7 +15,7 @@ SMODS.Atlas {
 }
 
 SMODS.Atlas {
-    key = "sneak_atlas",
+    key = "sneaky_atlas",
     path = "Sneak.png",
     px = 71,
     py = 95
@@ -152,9 +152,9 @@ SMODS.Joker {
 }
 
 SMODS.Joker {
-    key = "sneak",
-    name = "sneak",
-    atlas = "sneak_atlas",
+    key = "sneaky",
+    name = "sneaky",
+    atlas = "sneaky_atlas",
     pos = { x = 0, y = 0},
     rarity = 2,
     cost = 6,
@@ -162,7 +162,7 @@ SMODS.Joker {
     eternal_compat = true,
 
     loc_txt = {
-        name = "Sneak",
+        name = "Sneaky",
         text = {
             "Adds {C:mult}+400{} Mult",
         },

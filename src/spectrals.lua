@@ -26,6 +26,13 @@ SMODS.Atlas {
 }
 
 SMODS.Atlas {
+    key = "couldhavebeen_atlas",
+    path = "CouldHaveBeen.png",
+    px = 71,
+    py = 95
+}
+
+SMODS.Atlas {
     key = "pizzabox_atlas",
     path = "PizzaBox.png",
     px = 71,
@@ -189,5 +196,97 @@ SMODS.Consumable {
             return true
         end
         }))
+    end,
+}
+
+SMODS.Consumable{
+    key = "couldhavebeen",
+    name = "couldhavebeen",
+    atlas = "couldhavebeen_atlas",
+    set = "Spectral",
+    pos = { x = 0, y = 0 },
+
+    config = { extra = { max_highlighted = 1, min_highlighted = 1 } },
+
+    loc_vars = function(self, info_queue, card)
+        return { vars = { card.ability.extra.max_highlighted } }
+    end,
+
+    loc_txt = {
+        name = "Could Have Been",
+        text = {
+            "Select 1 card",
+            "Turn all other cards in hand",
+            "into that card"
+        },
+    },
+
+    use = function(self, card, area, copier)
+        local cards_in_hand = all_hand_cards()
+
+        -- flip all cards (animation)
+        for i = 1, #cards_in_hand do
+            local percent = 1.15 - (i - 0.999) / (#cards_in_hand - 0.998) * 0.3
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.15,
+                func = function()
+                    cards_in_hand[i]:flip()
+                    play_sound('card1', percent)
+                    cards_in_hand[i]:juice_up(0.3, 0.3)
+                    return true
+                end
+            }))
+        end
+
+        local selected_card = G.hand.highlighted and G.hand.highlighted[1]
+        if not selected_card then return end
+
+        -- copy selected into all others
+        for i = 1, #cards_in_hand do
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.1,
+                func = function()
+                    if cards_in_hand[i] ~= selected_card then
+                        copy_card(selected_card, cards_in_hand[i])
+                    end
+                    return true
+                end
+            }))
+        end
+
+        -- flip back (animation)
+        for i = 1, #cards_in_hand do
+            local percent = 1.15 - (i - 0.999) / (#cards_in_hand - 0.998) * 0.3
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.15,
+                func = function()
+                    cards_in_hand[i]:flip()
+                    play_sound('card1', percent)
+                    cards_in_hand[i]:juice_up(0.3, 0.3)
+                    return true
+                end
+            }))
+        end
+
+        G.E_MANAGER:add_event(Event({
+            trigger = 'after',
+            delay = 0.2,
+            func = function()
+                G.hand:unhighlight_all()
+                return true
+            end
+        }))
+
+        delay(0.5)
+    end,
+
+    can_use = function(self, card)
+        local hi = (G.hand and G.hand.highlighted) and #G.hand.highlighted or 0
+        return G.hand
+            and hi >= card.ability.extra.min_highlighted
+            and hi <= card.ability.extra.max_highlighted
     end,
 }
