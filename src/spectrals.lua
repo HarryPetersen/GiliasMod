@@ -25,6 +25,75 @@ SMODS.Atlas {
     py = 95
 }
 
+SMODS.Atlas {
+    key = "pizzabox_atlas",
+    path = "PizzaBox.png",
+    px = 71,
+    py = 95
+}
+
+SMODS.Consumable {
+    key = "pizzabox",
+    name = "pizzabox",
+    atlas = "pizzabox_atlas",
+    set = "Spectral",
+    pos = { x = 0, y = 0 },
+
+    config = { extra = { seal = 'Blue' } },
+
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue + 1] = G.P_SEALS[card.ability.extra.seal]
+    end,
+
+    loc_txt = {
+        name = "Pizza Box",
+        text = {
+            "Adds {C:blue}Blue Seal{} to all",
+            "cards in hand,",
+            "sets money to {C:money}$0"
+        },
+    },
+
+    use = function(self, card, area, copier)
+        local cards_in_hand = all_hand_cards()
+        for c, i in ipairs(cards_in_hand) do
+            G.E_MANAGER:add_event(Event({
+                func = function()
+                    play_sound('tarot1')
+                    card:juice_up(0.3, 0.5)
+                    return true
+                end
+            }))
+
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.1,
+                func = function()
+                    i:set_seal(card.ability.extra.seal, nil, true)
+                    return true
+                end
+            }))
+
+            G.E_MANAGER:add_event(Event({
+                trigger = 'after',
+                delay = 0.4,
+                func = function()
+                    play_sound('timpani')
+                    card:juice_up(0.3, 0.5)
+                    if G.GAME.dollars ~= 0 then
+                        ease_dollars(-G.GAME.dollars, true)
+                    end
+                    return true
+                end
+            }))
+        end
+    end,
+
+    can_use = function(self, card)
+        return G and G.hand and G.hand.cards and #G.hand.cards > 0
+    end,
+}
+
 SMODS.Consumable {
     key = "haribow",
     set = "Spectral",

@@ -42,25 +42,6 @@ SMODS.Atlas {
     py = 95
 }
 
-local function clear_edition(c)
-  if not c then return end
-  -- some builds have a helper
-  if c.remove_edition then
-    pcall(function() c:remove_edition(true) end)
-  end
-
-  -- hard clear everything Steamodded might treat as "already has an edition"
-  c.edition = nil
-  c.edition_key = nil
-  c.edition_type = nil
-
-  if c.ability then
-    c.ability.edition = nil
-    c.ability.edition_key = nil
-    c.ability.edition_type = nil
-  end
-end
-
 SMODS.Joker {
     key = "awesome_duo",
     name = "Awesome Duo",
