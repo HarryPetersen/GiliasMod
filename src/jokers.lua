@@ -42,6 +42,13 @@ SMODS.Atlas {
     py = 95
 }
 
+SMODS.Atlas {
+    key = "sillyboi_atlas",
+    path = "SillyBoi.png",
+    px = 71, 
+    py = 95
+}
+
 SMODS.Joker {
     key = "awesome_duo",
     name = "Awesome Duo",
@@ -307,4 +314,36 @@ SMODS.Joker {
             }
         end
     end
+}
+
+SMODS.Joker{
+    key = "sillyboi",
+    name = "Silly Boi",
+    atlas = "sillyboi_atlas",
+    pos = { x = 0, y = 0 },
+    rarity = 2,
+    cost = 10,
+    blueprint_compat = false,
+    eternal_compat = false,
+
+    config = { extra = { dollars = 10 } },
+
+    loc_txt = {
+        name = "Silly Boi",
+        text = {
+            "Will change later,",
+            "Couldnt get stuff to work",
+            "Just gives {C:money}$#1#{}"
+        },
+    },
+
+    loc_vars = function(self, info_queue, card)
+        return { vars = { card.ability.extra.dollars } }
+    end,
+
+    calculate = function(self, card, context)
+        if context.selling_self then
+            return { dollars = card.ability.extra.dollars }
+        end
+    end,
 }
