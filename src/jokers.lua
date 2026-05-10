@@ -49,6 +49,13 @@ SMODS.Atlas {
     py = 95
 }
 
+SMODS.Atlas {
+    key = "snoopy_atlas",
+    path = "snoopy.png",
+    px = 71, 
+    py = 95
+}
+
 SMODS.Joker {
     key = "awesome_duo",
     name = "Awesome Duo",
@@ -346,4 +353,42 @@ SMODS.Joker{
         G.GAME.round_resets.hands = G.GAME.round_resets.hands - card.ability.extra.hands
         ease_hands_played(-card.ability.extra.hands)
     end
+}
+
+SMODS.Joker{
+    key = "snoopy",
+    name = "Snoopy",
+    atlas = "snoopy_atlas",
+    pos = { x = 0, y = 0 },
+    rarity = 2,
+    cost = 5,
+    blueprint_compat = false,
+    eternal_compat = true,
+
+    config = { extra = {odds = 2, repetitions = 2}},
+
+    loc_vars = function(self, info_queue, card)
+        local numerator, denominator = SMODS.get_probability_vars(card, 1, card.ability.extra.odds, 'snoopy')
+        return { vars = { numerator, denominator, card.ability.extra.repetitions } }
+    end,
+
+    loc_txt = {
+        name = "Snoopy",
+        text = {
+        "{C:green}#1# in #2#{} chance for",
+        "played cards to retrigger",
+        "{C:attention} #3# {} Times when scored",
+        },
+    },
+
+    calculate = function(self, card, context)
+        if context.repetition
+            and context.cardarea == G.play
+            and SMODS.pseudorandom_probability(card, 'snoopy', 1, card.ability.extra.odds)
+        then
+            return {
+                repetitions = card.ability.extra.repetitions
+            }
+        end
+    end,
 }
