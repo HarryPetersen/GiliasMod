@@ -56,6 +56,13 @@ SMODS.Atlas {
     py = 95
 }
 
+SMODS.Atlas {
+    key = "Wans_atlas",
+    path = "Wans.png",
+    px = 71, 
+    py = 95
+}
+
 SMODS.Joker {
     key = "awesome_duo",
     name = "Awesome Duo",
@@ -390,5 +397,57 @@ SMODS.Joker{
                 repetitions = card.ability.extra.repetitions
             }
         end
+    end,
+}
+
+SMODS.Joker{
+    key = "wans",
+    name = "Wans",
+    atlas = "Wans_atlas",
+    pos = { x = 0, y = 0 },
+    rarity = 3,
+    cost = 10,
+    blueprint_compat = false,
+    eternal_compat = true,
+
+    config = { extra = { dollars = 5 } },
+    loc_vars = function(self, info_queue, card)
+        info_queue[#info_queue + 1] = G.P_CENTERS.m_lucky
+        return { vars = { card.ability.extra.dollars} }
+    end,
+
+    loc_txt = {
+        name = "Cheeky Cat",
+        text = {
+            "Played {C:attention}Lucky{} cards",
+            "earn {C:money}$#1#{} when scored",
+        },
+    },
+
+    calculate = function(self, card, context)
+        if context.individual and context.cardarea == G.play and
+            SMODS.has_enhancement(context.other_card, 'm_lucky') then
+            G.GAME.dollar_buffer = (G.GAME.dollar_buffer or 0) + card.ability.extra.dollars
+            return {
+                dollars = card.ability.extra.dollars,
+                func = function() -- This is for timing purposes, it runs after the dollar manipulation
+                    G.E_MANAGER:add_event(Event({
+                        func = function()
+                            G.GAME.dollar_buffer = 0
+                            return true
+                        end
+                    }))
+                end
+            }
+        end
+    end,
+
+    in_pool = function(self, args) --equivalent to `enhancement_gate = 'm_lucky'`
+        for _, playing_card in ipairs(G.playing_cards or {}) do
+            if SMODS.has_enhancement(playing_card, 'm_lucky') then
+                return true
+            end
+        end
+        return false
     end,
 }
